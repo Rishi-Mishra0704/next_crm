@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { sql } from "drizzle-orm";
-import { getDbClient } from "@/app/drizzle/db";
+import { getDbClient } from "@/lib/drizzle/db";
 
 export async function POST(req: Request) {
   try {

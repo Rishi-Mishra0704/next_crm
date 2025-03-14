@@ -4,57 +4,33 @@ import { useState } from "react";
 export default function Home() {
   const [dbUrl, setDbUrl] = useState("");
   const [tables, setTables] = useState<string[]>([]);
-  const [emailTables, setEmailTables] = useState<Record<string, string[]>>({});
+  const [tableData, setTableData] = useState<Record<string, { columns: string[]; data: any[] }>>({});
   const [error, setError] = useState("");
 
   const fetchTables = async () => {
     setError("");
     try {
-      const res = await fetch("/api/fetch-emails", {
+      const res = await fetch("/api/fetch-tables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dbUrl }),
       });
-  
-      const data = await res.json();
 
-      if (res.ok) {
-        setTables(data.allTables || []);
-        setEmailTables(data.emailTables || {});
+      const data: TableDataResponse = await res.json();
+
+      if (res.ok && data.success) {
+        setTables(data.data?.allTables || []);
+        setTableData(data.data?.tableData || {});
       } else {
-        setError(data.error || "Unknown error");
+        setError(typeof data.error === "string" ? data.error : "Unknown error");
       }
     } catch (err) {
       setError("Failed to fetch tables");
     }
   };
-  
-
-  const sendEmails = async (table: string, emailField: string) => {
-    const subject = prompt("Enter email subject");
-    const message = prompt("Enter email message");
-    if (!subject || !message) return;
-
-    try {
-      const res = await fetch("/api/send-emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dbUrl, table, emailField, subject, message }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        alert(`Emails sent to ${data.emailsSent} users`);
-      } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      alert("Failed to send emails");
-    }
-  };
 
   return (
-    <main className="p-6 max-w-lg mx-auto">
+    <main className="p-6">
       <h1 className="text-2xl font-bold mb-4">Connect Your Database</h1>
       <input
         type="text"
@@ -69,27 +45,53 @@ export default function Home() {
 
       {error && <p className="text-red-500 mt-2">{error}</p>}
 
-      <h2 className="text-xl font-semibold mt-4">All Tables</h2>
-      <ul className="mt-2">
-        {tables?.map((table) => (
-          <li key={table} className="border p-2 rounded mb-2">{table}</li>
-        ))}
-      </ul>
-
-      <h2 className="text-xl font-semibold mt-4">Tables with Emails</h2>
-      <ul className="mt-2">
-        {Object.keys(emailTables).map((table) => (
-          <li key={table} className="border p-2 rounded mb-2 flex justify-between">
-            <span>{table}: {emailTables[table].join(", ")}</span>
-            <button 
-              className="bg-green-500 text-white p-2 rounded" 
-              onClick={() => sendEmails(table, emailTables[table][0])}
-            >
-              Send Emails
-            </button>
-          </li>
-        ))}
-      </ul>
+      <h2 className="text-xl font-semibold mt-6">All Tables</h2>
+      {tables.length > 0 ? (
+        <div className="mt-4">
+          {tables.map((table) => (
+            <div key={table} className="w-full p-4 ">
+              <h3 className="text-lg font-semibold mb-2">{table}</h3>
+              {tableData[table]?.columns.length ? (
+                <table className="w-full border-collapse border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      {tableData[table].columns.map((col) => (
+                        <th key={col} className="border border-gray-300 px-4 py-2 text-left">
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableData[table].data.length ? (
+                      tableData[table].data.map((row, rowIndex) => (
+                        <tr key={rowIndex} className="border border-gray-300">
+                          {tableData[table].columns.map((col) => (
+                            <td key={col} className="border border-gray-300 px-4 py-2">
+                            {typeof row[col] === "object" ? JSON.stringify(row[col]) : row[col] ?? "-"}
+                          </td>
+                          
+                          ))}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={tableData[table].columns.length} className="text-center p-4">
+                          No Data Available
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <p>No columns found for this table.</p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500 mt-2">No tables found.</p>
+      )}
     </main>
   );
 }
