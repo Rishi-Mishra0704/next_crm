@@ -15,11 +15,12 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dbUrl }),
       });
-
+  
       const data = await res.json();
+
       if (res.ok) {
-        setTables(data.tables);
-        setEmailTables(data.emailTables);
+        setTables(data.allTables || []);
+        setEmailTables(data.emailTables || {});
       } else {
         setError(data.error || "Unknown error");
       }
@@ -27,6 +28,7 @@ export default function Home() {
       setError("Failed to fetch tables");
     }
   };
+  
 
   const sendEmails = async (table: string, emailField: string) => {
     const subject = prompt("Enter email subject");
@@ -69,7 +71,7 @@ export default function Home() {
 
       <h2 className="text-xl font-semibold mt-4">All Tables</h2>
       <ul className="mt-2">
-        {tables.map((table) => (
+        {tables?.map((table) => (
           <li key={table} className="border p-2 rounded mb-2">{table}</li>
         ))}
       </ul>

@@ -45,13 +45,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ allTables, emailTables, emailData }, { status: 200 });
+    return NextResponse.json({
+      allTables,
+      emailTables: Object.fromEntries(emailTables.map((table) => [table, ["email"]])),
+      emailData
+    }, { status: 200 });
+    
 
   } catch (error) {
     console.error("Error fetching tables/emails:", error);
     return NextResponse.json({ message: "Failed to fetch tables/emails", error }, { status: 500 });
 
   } finally {
-    if (pool) await pool.end(); // Close database connection properly
+    if (pool) await pool.end();
   }
 }
