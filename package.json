@@ -15,6 +15,7 @@
     "nodemailer": "^6.10.0",
     "pg": "^8.14.0",
     "react": "^19.0.0",
+    "react-data-table-component": "^7.7.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {

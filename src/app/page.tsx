@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import DataTable, { TableColumn } from "react-data-table-component";
 
 export default function Home() {
   const [dbUrl, setDbUrl] = useState("");
   const [tables, setTables] = useState<string[]>([]);
   const [tableData, setTableData] = useState<Record<string, { columns: string[]; data: any[] }>>({});
   const [error, setError] = useState("");
+  const [columns, setColumns] = useState<Record<string, TableColumn<any>[]>>({});
 
   const fetchTables = async () => {
     setError("");
@@ -21,6 +23,18 @@ export default function Home() {
       if (res.ok && data.success) {
         setTables(data.data?.allTables || []);
         setTableData(data.data?.tableData || {});
+
+        // Generate columns once instead of inside map()
+        const newColumns: Record<string, TableColumn<any>[]> = {};
+        data.data?.allTables.forEach((table) => {
+          newColumns[table] = data.data?.tableData[table]?.columns.map((col) => ({
+            name: col,
+            selector: (row) => (typeof row[col] === "object" ? JSON.stringify(row[col]) : row[col] ?? "-"),
+            sortable: true,
+          })) || [];
+        });
+
+        setColumns(newColumns);
       } else {
         setError(typeof data.error === "string" ? data.error : "Unknown error");
       }
@@ -49,40 +63,16 @@ export default function Home() {
       {tables.length > 0 ? (
         <div className="mt-4">
           {tables.map((table) => (
-            <div key={table} className="w-full p-4 ">
+            <div key={table} className="w-full p-4">
               <h3 className="text-lg font-semibold mb-2">{table}</h3>
-              {tableData[table]?.columns.length ? (
-                <table className="w-full border-collapse border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      {tableData[table].columns.map((col) => (
-                        <th key={col} className="border border-gray-300 px-4 py-2 text-left">
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableData[table].data.length ? (
-                      tableData[table].data.map((row, rowIndex) => (
-                        <tr key={rowIndex} className="border border-gray-300">
-                          {tableData[table].columns.map((col) => (
-                            <td key={col} className="border border-gray-300 px-4 py-2">
-                            {typeof row[col] === "object" ? JSON.stringify(row[col]) : row[col] ?? "-"}
-                          </td>
-                          
-                          ))}
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={tableData[table].columns.length} className="text-center p-4">
-                          No Data Available
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              {columns[table]?.length > 0 ? (
+                <DataTable
+                  columns={columns[table]}
+                  data={tableData[table]?.data || []}
+                  striped
+                  highlightOnHover
+                  pagination
+                />
               ) : (
                 <p>No columns found for this table.</p>
               )}
