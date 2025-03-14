@@ -8,9 +8,10 @@ export async function POST(req: NextRequest) {
   try {
     const { dbUrl } = await req.json();
     if (!dbUrl) return NextResponse.json({ error: "Database URL is required" }, { status: 400 });
-
+    console.log("Database URL:", dbUrl);
+    
     // Ensure the connection is established
-    pool = new Pool({ connectionString: dbUrl, database: "Dev" });
+    pool = new Pool({ connectionString: dbUrl});
     const db = drizzle(pool);
 
     // Fetch all table names
