@@ -2,18 +2,23 @@
 import DbTable from "@/lib/components/DbTable";
 import { useState } from "react";
 import DataTable, { TableColumn } from "react-data-table-component";
+import { Primitive } from "react-data-table-component/dist/DataTable/types";
 
 export default function Home() {
   const [dbUrl, setDbUrl] = useState("");
   const [tables, setTables] = useState<string[]>([]);
   const [tableData, setTableData] = useState<
-    Record<string, { columns: string[]; data: any[] }>
+    Record<string, { columns: string[]; data: Record<string, unknown>[] }>
   >({});
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState("");
   const [columns, setColumns] = useState<Record<string, TableColumn<any>[]>>(
     {}
   );
+  const [queryResult, setQueryResult] = useState<Record<string, unknown>[]>([]);
+  const [queryColumns, setQueryColumns] = useState<
+    TableColumn<Record<string, unknown>>[]
+  >([]);
 
   const fetchTables = async () => {
     setError("");
@@ -52,31 +57,38 @@ export default function Home() {
       setError("Failed to fetch tables");
     }
   };
-
   const onSubmitPrompt = async () => {
     if (!prompt) return;
 
-    // try {
-    //   const res = await fetch("/api/get-data", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ dbUrl, prompt }),
-    //   });
+    setError("");
+    try {
+      const res = await fetch("/prompt-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dbUrl, prompt }),
+      });
 
-    //   const data: TableDataResponse = await res.json();
+      const data: QueryResponse<Record<string, unknown>> = await res.json();
 
-    //   if (res.ok && data.success) {
-    //     setTables(data.data?.allTables || []);
-    //     setTableData(data.data?.tableData || {});
-    //   } else {
-    //     setError(typeof data.error === "string" ? data.error : "Unknown error");
-    //   }
-    // } catch (err) {
-    //   setError("Failed to fetch data");
-    // }
-    console.log("Prompt:", prompt);
-    
-  }
+      if (res.ok && data.success && data.data) {
+        setQueryResult(data.data);
+        setQueryColumns(
+          Object.keys(data.data[0] || {}).map((key) => ({
+            name: key,
+            selector: (row) =>
+              typeof row[key] === "object"
+                ? JSON.stringify(row[key])
+                : (row[key] as Primitive) ?? "-",
+            sortable: true,
+          }))
+        );
+      } else {
+        setError((data.error as string) ?? "Unknown error");
+      }
+    } catch {
+      setError("Failed to process prompt");
+    }
+  };
 
   return (
     <main className="p-6">
@@ -116,7 +128,7 @@ export default function Home() {
       <input
         type="text"
         className="w-full p-2 border rounded mt-4"
-        title="prompt"
+        id="prompt"
         placeholder="Enter your prompt here"
         onChange={(e) => setPrompt(e.target.value)}
       />
@@ -126,6 +138,12 @@ export default function Home() {
       >
         Submit
       </button>
+      {queryResult.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold">Query Results</h2>
+          <DataTable columns={queryColumns} data={queryResult} pagination />
+        </div>
+      )}
     </main>
   );
 }
