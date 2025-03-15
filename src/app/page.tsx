@@ -6,6 +6,7 @@ import { Primitive } from "react-data-table-component/dist/DataTable/types";
 
 export default function Home() {
   const [dbUrl, setDbUrl] = useState("");
+  const [loading, setLoading] = useState(false);
   const [tables, setTables] = useState<string[]>([]);
   const [tableData, setTableData] = useState<
     Record<string, { columns: string[]; data: Record<string, unknown>[] }>
@@ -22,13 +23,14 @@ export default function Home() {
 
   const fetchTables = async () => {
     setError("");
+    setLoading(true);
     try {
       const res = await fetch("/api/fetch-tables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dbUrl }),
       });
-
+      localStorage.setItem("dbUrl", dbUrl);
       const data: TableDataResponse = await res.json();
 
       if (res.ok && data.success) {
@@ -56,13 +58,19 @@ export default function Home() {
     } catch (err) {
       setError("Failed to fetch tables");
     }
+    setLoading(false);
   };
   const onSubmitPrompt = async () => {
     if (!prompt) return;
-
+    setLoading(true);
     setError("");
+    const dbUrl = localStorage.getItem("dbUrl");
+    if (!dbUrl) {
+      setError("Database URL not found");
+      return;
+    }
     try {
-      const res = await fetch("/prompt-ai", {
+      const res = await fetch("/api/prompt-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dbUrl, prompt }),
@@ -88,6 +96,7 @@ export default function Home() {
     } catch {
       setError("Failed to process prompt");
     }
+    setLoading(false);
   };
 
   return (
@@ -104,7 +113,7 @@ export default function Home() {
         onClick={fetchTables}
         className="bg-blue-500 text-white p-2 rounded cursor-pointer"
       >
-        Fetch Tables
+        {loading ? "Loading..." : "Fetch Tables"}
       </button>
       {error && <p className="text-red-500 mt-2">{error}</p>}
       <h2 className="text-xl font-semibold mt-6">All Tables</h2>
@@ -136,7 +145,7 @@ export default function Home() {
         onClick={onSubmitPrompt}
         className="bg-blue-500 text-white p-2 rounded cursor-pointer mt-4"
       >
-        Submit
+        {loading ? "Loading..." : "Submit"}
       </button>
       {queryResult.length > 0 && (
         <div className="mt-6">

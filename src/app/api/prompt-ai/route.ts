@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
     pool = new Pool({ connectionString: dbUrl });
     const db = drizzle(pool);
 
-    // 🔹 Fetch schema dynamically
     const schemaInfo = await getSchemaInfo(db);
     if (!schemaInfo) {
       return NextResponse.json<QueryResponse<null>>(
@@ -28,20 +27,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔹 Append schema to the AI prompt
-    const fullPrompt = `Database Schema: ${schemaInfo}. ${prompt}`;
-    const query = await askAi(fullPrompt);
+    console.log("Schema Info:", schemaInfo);
+    
 
-    if (!query) {
+    const query = await askAi(schemaInfo, prompt);
+
+    if (!query || query.startsWith("AI did not")) {
       return NextResponse.json<QueryResponse<null>>(
-        { success: false, message: "Failed to generate query", data: null },
+        { success: false, message: "Failed to generate a valid SQL query", data: null },
         { status: 500 }
       );
     }
 
     console.log("Generated SQL Query:", query);
 
-    // Execute AI-generated query
     const result = await db.execute<SchemaRow>(sql.raw(query));
 
     return NextResponse.json<QueryResponse<SchemaRow>>(
