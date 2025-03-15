@@ -51,7 +51,7 @@ export default function Home() {
 
         setColumns(newColumns);
       } else {
-        setError(typeof data.error === "string" ? data.error : "Unknown error");
+        setError(data.message ?? "Unknown error");
       }
     } catch (err) {
       setError("Failed to fetch tables");
@@ -83,7 +83,7 @@ export default function Home() {
           }))
         );
       } else {
-        setError((data.error as string) ?? "Unknown error");
+        setError(data.message ?? "Unknown error");
       }
     } catch {
       setError("Failed to process prompt");
