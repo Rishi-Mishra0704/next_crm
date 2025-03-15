@@ -44,6 +44,5 @@ export const askAi = async (schemaInfo: string, prompt: string): Promise<string>
   }
 };
 
-//postgresql://DevDBAdmin:Password%40123d@postgresql-193669-0.cloudclusters.net:10218/DEV
 
 
